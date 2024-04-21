@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mortgage Calculator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        th {
+            position: sticky;
+            top: 0;
+        }
+        .bold {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app" class="container-fluid">
+    <p class="h4">Mortgage Calculator</p>
+    
+    <div class="row">
+        <div class="col-sm">
+            <form @submit.prevent="calculate">
+                <div class="row m-2">
+                    <div class="col-sm">
+                        <div class="form-floating">
+                            <input id="la1" type="text" class="form-control" v-model.number="propAmt" @keydown="loanAmountKD" pattern="[0-9k]*" name="propAmt">
+                            <label for="la1">Property Value :</label>
+                        </div>
+                    </div>
+                    <div class="col-sm">
+                        <div class="form-floating">
+                            <input class="form-control" type="number" v-model.number="loanTerm" required @input="calculate">
+                            <label>Loan Term (years):</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row m-2">
+                    <div class="col-sm">
+                        <div class="form-floating">
+                            <input id="la1" type="text" class="form-control" v-model.number="loanAmount" required @input="calculate" @keydown="loanAmountKD" name="loanAmount" pattern="[0-9k]*">
+                            <label for="la1">Loan Amount :</label>
+                        </div>
+                    </div>
+                    <div class="col-sm">
+                        <div class="form-floating">
+                            <input class="form-control" type="number" v-model.number="compareOver" required @input="calculate" :max="loanTerm">
+                            <label>Compare Over (years):</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row m-2">
+                    <div class="col-sm">
+                        <span>LTV is : {{LTVValue}}</span>
+                    </div>
+                </div>
+        
+                <div class="row m-2">
+                    <div class="col-sm">
+                        <div class="form-floating">
+                            <input class="form-control" type="number" v-model.number="interestRate1" required step="0.01" @input="calculate">
+                            <label>Rate 1%:</label>
+                        </div>
+                    </div>
+                    <div class="col-sm">
+                        <div class="form-floating">
+                            <input class="form-control" type="number" v-model.number="fee1" required @input="calculate">
+                            <label>Fee 1:</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row m-2">
+                    <div class="col-sm">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="chk1" v-model="fee1ToBal" @change="calculate" :disabled="(isntValidNumber(fee1,undefined) || fee1==0)">
+                            <label class="form-check-label" for="chk1">Add to balance</label>
+                        </div>
+                    </div>
+                    <div class="col-sm"></div>
+                </div>
+        
+                <div class="row m-2">
+                    <div class="col-sm">
+                        <div class="form-floating">
+                            <input class="form-control" type="number" v-model.number="interestRate2" required step="0.01" @input="calculate">
+                            <label>Rate 2%:</label>
+                        </div>
+                    </div>
+                    <div class="col-sm">
+                        <div class="form-floating">
+                            <input class="form-control" type="number" v-model.number="fee2" required @input="calculate">
+                            <label>Fee 2:</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row m-2">
+                    <div class="col-sm">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="chk2" v-model="fee2ToBal" @change="calculate" :disabled="(isntValidNumber(fee2,undefined) || fee2==0)">
+                            <label class="form-check-label" for="chk2">Add to balance</label>
+                        </div>
+                    </div>
+                    <div class="col-sm"></div>
+                </div>
+                <div class="row m-2">
+                    <div class="col-sm">
+                        <div class="form-floating">
+                            <input class="form-control" type="text" v-model="profileName" @keydown.enter="saveProfile">
+                            <label>Save as:</label>
+                        </div>
+                    </div>
+                    <div class="col-sm p-1 m-2">
+                        <input type="button" class="btn btn-primary" value="Save" @click="saveProfile">
+                    </div>
+                    
+                    <div class="col-sm">
+                        <div class="form-floating">
+                            <select @change="loadProfile" v-model="selectedProfile" class="form-select">
+                                <option value="" selected></option>
+                                <option v-for="i in saveProfileList" :value="i.name"> {{i.name}}</option>
+                            </select>
+                            <label>Saved Profiles:</label>
+                        </div>
+                    </div>
+                    <div class="col-sm p-1 m-2">
+                        <input type="button" class="btn btn-primary" value="Delete" @click="deleteProfile">
+                    </div>
+                </div>
+                <div class="row m-2">
+                </div>
+                <br>
+                <div class="row m-2">
+                    <div class="col">
+                        <input type="submit" class="btn btn-success" value="Calculate" >
+                    </div>
+                    <div class="col">
+                        <input type="button" class="btn btn-warning" value="Duplicate" @click="Duplicate">
+                    </div>
+                    <div class="col">
+                        <input type="button" class="btn btn-danger" value="Reset" @click="reset">
+                    </div>
+                </div>
+                
+            </form>
+            <br>
+            <div v-if="results.r1.length">
+                <div class="container shadow-sm p-2 m-2 bg-white border">
+                    <div class="row m-2 bold">
+                        <div class="col"></div><div class="col"><div class="float-sm-end">Rate 1</div></div><div class="col"><div class="float-sm-end" v-if="this.interestRate2!=0">Rate 2</div></div><div class="col"><div class="float-sm-end" v-if="this.interestRate2!=0">Diff</div></div>
+                    </div>
+                    <div class="row m-2">
+                        <div class="col">Monthly Payment</div> <div class="col"><div class="float-sm-end">{{formatN('',montlypay1)}}</div></div><div class="col"><div class="float-sm-end" v-if="this.interestRate2!=0">{{formatN('',montlypay2)}}</div></div><div class="col"><div class="float-sm-end" v-if="this.interestRate2!=0">{{formatN('',montlypay2-montlypay1)}}</div></div>
+                    </div>
+                    <div class="row m-2">
+                        <div class="col">Principal Paid</div> <div class="col float-sm-end"><div class="float-sm-end">{{formatN('',prin1)}}</div></div><div class="col"><div class="float-sm-end" v-if="this.interestRate2!=0">{{formatN('',prin2)}}</div></div><div class="col"><div class="float-sm-end" v-if="this.interestRate2!=0">{{formatN('',prin2-prin1)}}</div></div>
+                    </div>
+                    <div class="row m-2">
+                        <div class="col">Interest Paid</div> <div class="col float-sm-end"><div class="float-sm-end">{{formatN('',int1)}}</div></div><div class="col"><div class="float-sm-end" v-if="this.interestRate2!=0">{{formatN('',int2)}}</div></div><div class="col"><div class="float-sm-end" v-if="this.interestRate2!=0">{{formatN('',int2-int1)}}</div></div>
+                    </div>
+                    <div class="row m-2">
+                        <div class="col">Total Over {{compareOver}} years</div> <div class="col"><div class="float-sm-end">{{formatN('',total1)}}</div></div><div class="col"><div class="float-sm-end" v-if="this.interestRate2!=0">{{formatN('',total2)}}</div></div><div class="col"><div class="float-sm-end" v-if="this.interestRate2!=0">{{formatN('',total2-total1)}}</div></div>
+                    </div>
+                    <div class="row m-2">
+                        <div class="col">Baalnce at year {{compareOver}} </div> <div class="col"><div class="float-sm-end">{{formatN('',bal1)}}</div></div><div class="col"><div class="float-sm-end" v-if="this.interestRate2!=0">{{formatN('',bal2)}}</div></div><div class="col"><div class="float-sm-end" v-if="this.interestRate2!=0">{{formatN('',bal2-bal1)}}</div></div>
+                    </div>
+                    <br>
+                    <div class="row m-2" v-if="this.interestRate2!=0">
+                        <div class="col">
+                            You would be better of saving of {{Math.abs(netDiff)}} with <span class="bg-warning">{{netDiff>=0?'Rate 1':' Rate 2'}}</span> overall <b>but</b>  for strictly speaking  over {{compareOver}} years : <span class="bg-warning">{{ ((total1)<=(total2))?'Rate 1':'Rate 2' }}</span>  is better by {{formatN('',Math.abs(total2-total1))}}
+                        </div>
+                    </div>
+                </div>
+                <br>
+            </div>
+        </div>
+        <div class="col-sm">
+            <div v-if="results.r1.length" style="height: 95vh; overflow: auto;">
+                
+                <table class="table table-bordered table-hover">
+                    <thead>
+                        <tr class="table-primary">
+                            <th>Year</th>
+                            <th>Principal Paid</th>
+                            <th>Interest Paid</th>
+                            <th>Balance</th>
+                            <th v-if="this.interestRate2!=0"></th>
+                            <th v-if="this.interestRate2!=0">Principal Paid</th>
+                            <th v-if="this.interestRate2!=0">Interest Paid</th>
+                            <th v-if="this.interestRate2!=0">Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(result, index) in results.r1" :key="index" :class="(index==compareOver)?'table-success':''">
+                            <td>{{ index  }}</td>
+                            <td>{{ formatN('',parseF2(results.r1[index].principalPaid)) }}</td>
+                            <td>{{ formatN('',parseF2(results.r1[index].interestPaid)) }}</td>
+                            <td>{{ formatN('',parseF2(results.r1[index].balance)) }}</td>
+                            <td v-if="this.interestRate2!=0"></td>
+                            <td v-if="this.interestRate2!=0">{{ formatN('',parseF2(results.r2[index].principalPaid)) }}</td>
+                            <td v-if="this.interestRate2!=0">{{ formatN('',parseF2(results.r2[index].interestPaid)) }}</td>
+                            <td v-if="this.interestRate2!=0">{{ formatN('',parseF2(results.r2[index].balance)) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+
+function formatN(ccy,amt){
+	if(!ccy) ccy=''
+	if(!amt) amt=0.0;
+	if(ccy=='') return Intl.NumberFormat('en-GB').format(amt);
+	return Intl.NumberFormat('en-GB',{style: 'currency',currency:''+ccy+''}).format(amt);
+}
+
+    const app = Vue.createApp({
+       
+        data() {
+            return {
+                loanAmount: 240000,
+                interestRate1: 4.7,
+                interestRate2: 4.9,
+                loanTerm: 27,
+                results1: [],
+                results2: [],
+                results:{ r1:[] ,r2:[]},
+                fee1:999,
+                fee2:0,
+                fee1ToBal:false,
+                fee2ToBal:false
+                ,prin1:0,prin2:0,int1:0,int2:0,bal1:0,bal2:0,netDiff:0,netDiffOver:0
+                ,compareOver:2
+                ,montlypay1:0,montlypay2:0,total1:0,total2:0
+                ,saveProfileList:[]
+                ,selectedProfile:''
+                ,profileName:''
+                ,propAmt:320000
+            }
+        },
+        computed:{
+            LTVValue(){
+                let a=(( (this.loanAmount) / (this.propAmt==0?1:this.propAmt)) * 100)
+                return ''+this.parseF2(a)+'%'
+            }
+        }
+        ,methods: {
+            loanAmountKD(e){
+                console.log(e.keyCode);
+                if(e.keyCode==75){
+                    e.preventDefault();
+                    if(e.target.name=='propAmt') this.propAmt=parseInt(this.propAmt.toString()+'000')
+                    if(e.target.name=='loanAmount'){
+                        this.loanAmount=parseInt(this.loanAmount.toString()+'000')
+                        this.calculate();
+                    }
+                }
+            }
+            ,reset(){
+                this.loanAmount= 240000
+                this.interestRate1= 4.7
+                this.interestRate2= 4.9
+                this.loanTerm= 27
+                this.results1= []
+                this.results2= []
+                this.results={ r1:[] ,r2:[]}
+                this.fee1=0
+                this.fee2=0
+                this.fee1ToBal=false
+                this.fee2ToBal=false
+                this.prin1=0
+                this.prin2=0
+                this.int1=0
+                this.int2=0
+                this.bal1=0
+                this.bal2=0
+                this.netDiff=0
+                this.netDiffOver=0
+                this.compareOver=2
+                this.montlypay1=0
+                this.montlypay2=0
+                this.total1=0
+                this.total2=0
+                this.selectedProfile=''
+                this.profileName=''
+                this.propAmt=320000
+            }
+            ,Duplicate(){
+                let s = window.location.href
+                if(s.indexOf('?')>0){
+                    s=s.substring(0,s.indexOf('?'))
+                }
+                let s1=new URLSearchParams();
+                s1.append('loanAmount',parseInt(this.loanAmount))
+                s1.append('interestRate1',this.interestRate1)
+                s1.append('interestRate2',this.interestRate2)
+                s1.append('loanTerm',this.loanTerm)
+                s1.append('fee1',this.fee1)
+                s1.append('fee2',this.fee2)
+                s1.append('fee1ToBal',this.fee1ToBal)
+                s1.append('fee2ToBal',this.fee2ToBal)
+                s1.append('propAmt',this.propAmt)
+                
+                console.log(s1.toString())
+                window.open(s+'?'+s1.toString())
+            }
+            ,init(){
+                let s=window.location.href;
+                if(s.indexOf('?')<=0){
+                    console.log('params not found, ? index is missing');
+                    return
+                }
+                s=s.substring(s.indexOf('?')+1,s.length)
+                let sp= new URLSearchParams(s)
+                if(sp.get('loanAmount')==null) return
+                this.loanAmount=parseInt(sp.get('loanAmount'))
+                this.interestRate1=parseFloat(sp.get('interestRate1'))
+                this.interestRate2=parseFloat(sp.get('interestRate2'))
+                this.loanTerm=parseInt(sp.get('loanTerm'))
+                this.fee1=parseInt(sp.get('fee1'))
+                this.fee2=parseInt(sp.get('fee2'))
+                this.fee1ToBal=new Boolean(sp.get('fee1ToBal'))
+                this.fee2ToBal=new Boolean(sp.get('fee2ToBal'))
+                this.propAmt=parseInt(sp.get('propAmt'))
+            }
+            ,saveProfile(){
+                if(this.profileName=="") return;
+                let newData1= {
+                    'loanAmount':this.loanAmount,
+                    'interestRate1':this.interestRate1,
+                    'interestRate2':this.interestRate2,
+                    'loanTerm':this.loanTerm,
+                    'fee1':this.fee1,
+                    'fee2':this.fee2,
+                    'fee1ToBal':this.fee1ToBal,
+                    'fee2ToBal':this.fee2ToBal,
+                    'propAmt':this.propAmt
+                }
+                let SavedProfiles = localStorage.getItem('SavedProfiles');
+                if(SavedProfiles==undefined){
+                    SavedProfiles = []
+                    if(name!="") SavedProfiles.push({name:this.profileName,data:newData1,modified:new Date()})
+                }else{
+                    SavedProfiles=JSON.parse(SavedProfiles);
+                    let exists=false;
+                    for(let x=0;x<SavedProfiles.length;x++){
+                        if(SavedProfiles[x].name==this.profileName){
+                            SavedProfiles[x].data=newData1
+                            exists=true;
+                            break
+                        }
+                    }
+                    if(!exists && name!=""){
+                        SavedProfiles.push({name:this.profileName,data:newData1,modified:new Date()})
+                    }
+                }
+                this.saveProfileList=SavedProfiles;
+                localStorage.setItem('SavedProfiles',JSON.stringify(SavedProfiles))
+                this.selectedProfile=this.profileName
+                this.profileName=''
+                
+            }
+            ,loadProfilesInit(){
+                let SavedProfiles = localStorage.getItem('SavedProfiles');
+                if(SavedProfiles==undefined){
+                    SavedProfiles = []
+                }else{
+                    SavedProfiles=JSON.parse(SavedProfiles);
+                }
+                this.saveProfileList=SavedProfiles;
+            }
+            ,deleteProfile(){
+                
+                let SavedProfiles = localStorage.getItem('SavedProfiles');
+                SavedProfiles=JSON.parse(SavedProfiles);
+                let name=this.selectedProfile
+                let newArr=[]
+                for(let x=0;x<SavedProfiles.length;x++){
+                    if(SavedProfiles[x].name==name){
+                        continue
+                    }
+                    newArr.push(SavedProfiles[x])
+                }
+                localStorage.setItem('SavedProfiles',JSON.stringify(newArr))
+                this.saveProfileList=newArr;
+            }
+            ,loadProfile(){
+                if(this.selectedProfile=="") return;
+                let SavedProfiles = localStorage.getItem('SavedProfiles');
+                let newData1={}
+                SavedProfiles=JSON.parse(SavedProfiles);
+                let name=this.selectedProfile
+                for(let x=0;x<SavedProfiles.length;x++){
+                    if(SavedProfiles[x].name==name){
+                        newData1 = SavedProfiles[x].data
+                        break
+                    }
+                }
+                this.loanAmount=newData1.loanAmount
+                this.interestRate1=newData1.interestRate1
+                this.interestRate2=newData1.interestRate2
+                this.loanTerm=newData1.loanTerm
+                this.fee1=newData1.fee1
+                this.fee2=newData1.fee2
+                this.fee1ToBal=newData1.fee1ToBal
+                this.fee2ToBal=newData1.fee2ToBal
+                this.propAmt=newData1.propAmt
+                this.calculate()
+            }
+            ,addZero(){
+                if(!this.isntValidNumber (this.loanAmount,1)){
+                    let n=this.loanAmount.toString();
+                    if(n.length>=3){
+                        n=n+"000"
+                        this.loanAmount=parseInt(n)
+                    }
+                }
+            }
+            ,calculate() {
+                if(isNaN(this.loanAmount) || this.loanAmount===""){
+                   this.loanAmount=0 
+                }
+                this.loanAmount=parseInt(this.loanAmount)
+                //if(this.loanTerm<this.compareOver) this.compareOver = this.loanTerm
+                if(this.isntValidNumber (this.loanAmount,1) || this.isntValidNumber (this.loanTerm,1) || this.isntValidNumber (this.compareOver,1) || 
+                    this.isntValidNumber (this.interestRate1,1) || this.isntValidNumber (this.interestRate2,undefined) || this.isntValidNumber (this.fee1,undefined) || this.isntValidNumber (this.fee2,undefined) ){
+                    console.log('not all params are provided yet')
+                    return
+                }
+                console.log('calculate started')
+                const st=new Date().getMilliseconds()
+                this.prin1=0
+                this.prin2=0
+                this.int1=0
+                this.int2=0
+                this.bal1=0
+                this.bal2=0
+                this.netDiff=0
+                this.montlypay1=0
+                this.montlypay2=0
+                this.total1=0
+                this.total2=0
+
+
+                let loanAmt1 = this.fee1ToBal? this.loanAmount+this.fee1 : this.loanAmount
+                let loanAmt2 = this.fee2ToBal? this.loanAmount+this.fee2 : this.loanAmount
+                let o1=this.calculate2(this.interestRate1,this.loanTerm,loanAmt1)
+                this.results1=o1.results
+                this.montlypay1=this.parseF2(o1.monthly)
+                o1=this.calculate2(this.interestRate2,this.loanTerm,loanAmt2)
+                this.results2=o1.results
+                this.montlypay2=this.parseF2(o1.monthly)
+                this.results.r1=(this.results1)
+                this.results.r2=(this.results2)
+
+                
+                for(let x=0;x<=this.compareOver;x++){
+                    this.prin1 += this.results1[x].principalPaid
+                    this.prin2 += this.results2[x].principalPaid
+
+                    this.int1 += this.results1[x].interestPaid
+                    this.int2 += this.results2[x].interestPaid
+
+                    this.bal1 = this.results1[x].balance;
+                    this.bal2 = this.results2[x].balance;
+                }
+                this.prin1 =this.parseF2(this.prin1);
+                this.prin2 =this.parseF2(this.prin2);
+
+                this.int1 =this.parseF2(this.int1);
+                this.int2 =this.parseF2(this.int2);
+
+                
+                
+                this.bal1 =this.parseF2(this.bal1);
+                this.bal2 =this.parseF2(this.bal2);
+                
+                let f1=this.fee1ToBal?0:this.fee1
+                let f2=this.fee2ToBal?0:this.fee2
+                
+                this.total1 = this.prin1+this.int1+f1
+                this.total2 = this.prin2+this.int2+f2
+
+                let x1= (this.prin2-this.prin1) + (this.int2-this.int1) + (this.bal2-this.bal1) + (f2 - f1)
+                this.netDiff = this.parseF2(x1)
+
+                const et=new Date().getMilliseconds()
+                console.log('Time taken to calc in ms: ' + (et-st) )
+            }
+            ,isntValidNumber(val,min){
+                return val==null || val==undefined || isNaN(val) || val==="" || (min!==undefined && val<min );
+            }
+            ,calculate2(interestRate,loanTerm,loanAmount) {
+                const monthlyInterestRate = (interestRate / 100) / 12;
+                const totalPayments = loanTerm * 12;
+                let balance = loanAmount;
+                let results = [];
+                let mir= this.calculateMonthlyPayment(monthlyInterestRate,totalPayments,balance)
+
+                results.push({
+                        year: 0,
+                        principalPaid: 0,
+                        interestPaid: 0,
+                        balance: balance
+                    });
+
+                for (let year = 0; year < loanTerm; year++) {
+                    let yearlyPrincipalPaid = 0;
+                    let yearlyInterestPaid = 0;
+
+                    for (let month = 0; month < 12; month++) {
+                        const interestPaid = balance * monthlyInterestRate;
+                        const principalPaid = mir - interestPaid;
+                        balance -= principalPaid;
+                        yearlyPrincipalPaid += principalPaid;
+                        yearlyInterestPaid += interestPaid;
+                    }
+
+                    results.push({
+                        year: year + 1,
+                        principalPaid: yearlyPrincipalPaid,
+                        interestPaid: yearlyInterestPaid,
+                        balance: balance
+                    });
+                }
+
+                return {
+                    results:results,
+                    monthly:mir
+                }
+            }
+            ,parseF(val,decimals){
+                return parseFloat(val.toFixed(decimals))
+            }
+            ,parseF2(val){
+                return this.parseF(val,2);
+            }
+            ,calculateMonthlyPayment(monthlyInterestRate,totalPayments, loanAmount) {
+                return (loanAmount * monthlyInterestRate) /
+                    (1 - Math.pow(1 + monthlyInterestRate, -totalPayments));
+            }
+            ,formatN(ccy,amt){
+    		    return formatN(ccy,amt);
+    	    }
+        }
+        ,mounted(){
+            this.loadProfilesInit()
+            this.init()
+            this.calculate()
+        }
+    });
+    app.mount('#app')
+</script>
+
+</body>
+</html>
