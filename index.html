@@ -139,7 +139,6 @@
                         <input type="submit" class="btn btn-success" value="Calculate" >
                     </div>
                     <div class="col">
-                        <!-- <input type="button" class="btn btn-warning" value="Duplicate" @click="Duplicate"> -->
                         <input type="button" class="btn btn-warning" value="Duplicate2" @click="Duplicate2($event)">
                     </div>
                     <div class="col">
@@ -296,34 +295,15 @@ function formatN(ccy,amt){
                 this.propAmt=320000
             }
             ,Duplicate2(event){
-                this.saveProfile(event,'DUPLICATE__1')
+                this.saveProfile(event,this.DuplicateProfileName)
                 let s = window.location.href
                 if(s.indexOf('?')>0){
                     s=s.substring(0,s.indexOf('?'))
                 }
                 let s1=new URLSearchParams();
-                s1.append('profileName','DUPLICATE__1')
+                s1.append('profileName',this.DuplicateProfileName)
                 console.log(s1.toString())
                 window.open(s+'?'+s1.toString())
-            }
-            ,Duplicate(){
-                // let s = window.location.href
-                // if(s.indexOf('?')>0){
-                //     s=s.substring(0,s.indexOf('?'))
-                // }
-                // let s1=new URLSearchParams();
-                // s1.append('loanAmount',parseInt(this.loanAmount))
-                // s1.append('interestRate1',this.interestRate1)
-                // s1.append('interestRate2',this.interestRate2)
-                // s1.append('loanTerm',this.loanTerm)
-                // s1.append('fee1',this.fee1)
-                // s1.append('fee2',this.fee2)
-                // s1.append('fee1ToBal',this.fee1ToBal)
-                // s1.append('fee2ToBal',this.fee2ToBal)
-                // s1.append('propAmt',this.propAmt)
-                
-                // console.log(s1.toString())
-                // window.open(s+'?'+s1.toString())
             }
             ,init(){
                 let s=window.location.href;
@@ -333,17 +313,6 @@ function formatN(ccy,amt){
                 }
                 s=s.substring(s.indexOf('?')+1,s.length)
                 let sp= new URLSearchParams(s)
-                if(sp.get('loanAmount')!=null) {
-                    this.loanAmount=parseInt(sp.get('loanAmount'))
-                    this.interestRate1=parseFloat(sp.get('interestRate1'))
-                    this.interestRate2=parseFloat(sp.get('interestRate2'))
-                    this.loanTerm=parseInt(sp.get('loanTerm'))
-                    this.fee1=parseInt(sp.get('fee1'))
-                    this.fee2=parseInt(sp.get('fee2'))
-                    this.fee1ToBal=new Boolean(sp.get('fee1ToBal'))
-                    this.fee2ToBal=new Boolean(sp.get('fee2ToBal'))
-                    this.propAmt=parseInt(sp.get('propAmt'))
-                }
                 if(sp.get('profileName')!=null){
                     this.loadProfile(null,sp.get('profileName'))
                 }
@@ -383,9 +352,10 @@ function formatN(ccy,amt){
                         SavedProfiles.push({name:name,data:newData1,modified:new Date()})
                     }
                 }
-                this.saveProfileList=SavedProfiles;
+                let a1=SavedProfiles.filter( (profile) => { if(profile.name!=this.DuplicateProfileName && profile.name!='') {return true}else {return false} } )
+                this.saveProfileList=a1;
                 localStorage.setItem('SavedProfiles',JSON.stringify(SavedProfiles))
-                if(name!='DUPLICATE__1'){
+                if(name!=this.DuplicateProfileName){
                     this.selectedProfile=name
                 }
                 this.profileName=''
@@ -398,7 +368,7 @@ function formatN(ccy,amt){
                 }else{
                     SavedProfiles=JSON.parse(SavedProfiles);
                 }
-                let a1=SavedProfiles.filter( (profile) => { if(profile.name!='DUPLICATE__1' && profile.name!='') {return true}else {return false} } )
+                let a1=SavedProfiles.filter( (profile) => { if(profile.name!=this.DuplicateProfileName && profile.name!='') {return true}else {return false} } )
                 console.log(a1);
                 
                 this.saveProfileList=a1;
@@ -412,7 +382,7 @@ function formatN(ccy,amt){
                 SavedProfiles=JSON.parse(SavedProfiles);
                 let newArr=[]
                 for(let x=0;x<SavedProfiles.length;x++){
-                    if(SavedProfiles[x].name==name || SavedProfiles[x].name.startsWith('DUPLICATE__1')){
+                    if(SavedProfiles[x].name==name || SavedProfiles[x].name.startsWith(this.DuplicateProfileName)){
                         continue
                     }
                     newArr.push(SavedProfiles[x])
