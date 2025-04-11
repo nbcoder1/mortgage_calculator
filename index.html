@@ -110,17 +110,17 @@
                 <div class="row m-2">
                     <div class="col-sm">
                         <div class="form-floating">
-                            <input class="form-control" type="text" v-model="profileName" @keydown.enter="saveProfile">
+                            <input class="form-control" type="text" v-model="profileName" @keydown.enter="saveProfile($event,null)">
                             <label>Save as:</label>
                         </div>
                     </div>
                     <div class="col-sm p-1 m-2">
-                        <input type="button" class="btn btn-primary" value="Save" @click="saveProfile">
+                        <input type="button" class="btn btn-primary" value="Save" @click="saveProfile($event,null)">
                     </div>
                     
                     <div class="col-sm">
                         <div class="form-floating">
-                            <select @change="loadProfile" v-model="selectedProfile" class="form-select">
+                            <select @change="loadProfile($event,null)" v-model="selectedProfile" class="form-select">
                                 <option value="" selected></option>
                                 <option v-for="i in saveProfileList" :value="i.name"> {{i.name}}</option>
                             </select>
@@ -128,7 +128,7 @@
                         </div>
                     </div>
                     <div class="col-sm p-1 m-2">
-                        <input type="button" class="btn btn-primary" value="Delete" @click="deleteProfile">
+                        <input type="button" class="btn btn-primary" value="Delete" @click="deleteProfile($event,null)">
                     </div>
                 </div>
                 <div class="row m-2">
@@ -139,7 +139,8 @@
                         <input type="submit" class="btn btn-success" value="Calculate" >
                     </div>
                     <div class="col">
-                        <input type="button" class="btn btn-warning" value="Duplicate" @click="Duplicate">
+                        <!-- <input type="button" class="btn btn-warning" value="Duplicate" @click="Duplicate"> -->
+                        <input type="button" class="btn btn-warning" value="Duplicate2" @click="Duplicate2($event)">
                     </div>
                     <div class="col">
                         <input type="button" class="btn btn-danger" value="Reset" @click="reset">
@@ -244,6 +245,7 @@ function formatN(ccy,amt){
                 ,selectedProfile:''
                 ,profileName:''
                 ,propAmt:320000
+                ,DuplicateProfileName:'DUPLICATE__1'
             }
         },
         computed:{
@@ -293,24 +295,35 @@ function formatN(ccy,amt){
                 this.profileName=''
                 this.propAmt=320000
             }
-            ,Duplicate(){
+            ,Duplicate2(event){
+                this.saveProfile(event,'DUPLICATE__1')
                 let s = window.location.href
                 if(s.indexOf('?')>0){
                     s=s.substring(0,s.indexOf('?'))
                 }
                 let s1=new URLSearchParams();
-                s1.append('loanAmount',parseInt(this.loanAmount))
-                s1.append('interestRate1',this.interestRate1)
-                s1.append('interestRate2',this.interestRate2)
-                s1.append('loanTerm',this.loanTerm)
-                s1.append('fee1',this.fee1)
-                s1.append('fee2',this.fee2)
-                s1.append('fee1ToBal',this.fee1ToBal)
-                s1.append('fee2ToBal',this.fee2ToBal)
-                s1.append('propAmt',this.propAmt)
-                
+                s1.append('profileName','DUPLICATE__1')
                 console.log(s1.toString())
                 window.open(s+'?'+s1.toString())
+            }
+            ,Duplicate(){
+                // let s = window.location.href
+                // if(s.indexOf('?')>0){
+                //     s=s.substring(0,s.indexOf('?'))
+                // }
+                // let s1=new URLSearchParams();
+                // s1.append('loanAmount',parseInt(this.loanAmount))
+                // s1.append('interestRate1',this.interestRate1)
+                // s1.append('interestRate2',this.interestRate2)
+                // s1.append('loanTerm',this.loanTerm)
+                // s1.append('fee1',this.fee1)
+                // s1.append('fee2',this.fee2)
+                // s1.append('fee1ToBal',this.fee1ToBal)
+                // s1.append('fee2ToBal',this.fee2ToBal)
+                // s1.append('propAmt',this.propAmt)
+                
+                // console.log(s1.toString())
+                // window.open(s+'?'+s1.toString())
             }
             ,init(){
                 let s=window.location.href;
@@ -320,19 +333,27 @@ function formatN(ccy,amt){
                 }
                 s=s.substring(s.indexOf('?')+1,s.length)
                 let sp= new URLSearchParams(s)
-                if(sp.get('loanAmount')==null) return
-                this.loanAmount=parseInt(sp.get('loanAmount'))
-                this.interestRate1=parseFloat(sp.get('interestRate1'))
-                this.interestRate2=parseFloat(sp.get('interestRate2'))
-                this.loanTerm=parseInt(sp.get('loanTerm'))
-                this.fee1=parseInt(sp.get('fee1'))
-                this.fee2=parseInt(sp.get('fee2'))
-                this.fee1ToBal=new Boolean(sp.get('fee1ToBal'))
-                this.fee2ToBal=new Boolean(sp.get('fee2ToBal'))
-                this.propAmt=parseInt(sp.get('propAmt'))
+                if(sp.get('loanAmount')!=null) {
+                    this.loanAmount=parseInt(sp.get('loanAmount'))
+                    this.interestRate1=parseFloat(sp.get('interestRate1'))
+                    this.interestRate2=parseFloat(sp.get('interestRate2'))
+                    this.loanTerm=parseInt(sp.get('loanTerm'))
+                    this.fee1=parseInt(sp.get('fee1'))
+                    this.fee2=parseInt(sp.get('fee2'))
+                    this.fee1ToBal=new Boolean(sp.get('fee1ToBal'))
+                    this.fee2ToBal=new Boolean(sp.get('fee2ToBal'))
+                    this.propAmt=parseInt(sp.get('propAmt'))
+                }
+                if(sp.get('profileName')!=null){
+                    this.loadProfile(null,sp.get('profileName'))
+                }
             }
-            ,saveProfile(){
-                if(this.profileName=="") return;
+            ,saveProfile(event, overrideProfileName){
+                let name = this.profileName;
+                if(overrideProfileName){
+                    name = overrideProfileName;
+                }
+                if(name=="") return;
                 let newData1= {
                     'loanAmount':this.loanAmount,
                     'interestRate1':this.interestRate1,
@@ -347,24 +368,26 @@ function formatN(ccy,amt){
                 let SavedProfiles = localStorage.getItem('SavedProfiles');
                 if(SavedProfiles==undefined){
                     SavedProfiles = []
-                    if(name!="") SavedProfiles.push({name:this.profileName,data:newData1,modified:new Date()})
+                    if(name!="") SavedProfiles.push({name:name,data:newData1,modified:new Date()})
                 }else{
                     SavedProfiles=JSON.parse(SavedProfiles);
                     let exists=false;
                     for(let x=0;x<SavedProfiles.length;x++){
-                        if(SavedProfiles[x].name==this.profileName){
+                        if(SavedProfiles[x].name==name){
                             SavedProfiles[x].data=newData1
                             exists=true;
                             break
                         }
                     }
                     if(!exists && name!=""){
-                        SavedProfiles.push({name:this.profileName,data:newData1,modified:new Date()})
+                        SavedProfiles.push({name:name,data:newData1,modified:new Date()})
                     }
                 }
                 this.saveProfileList=SavedProfiles;
                 localStorage.setItem('SavedProfiles',JSON.stringify(SavedProfiles))
-                this.selectedProfile=this.profileName
+                if(name!='DUPLICATE__1'){
+                    this.selectedProfile=name
+                }
                 this.profileName=''
                 
             }
@@ -375,16 +398,21 @@ function formatN(ccy,amt){
                 }else{
                     SavedProfiles=JSON.parse(SavedProfiles);
                 }
-                this.saveProfileList=SavedProfiles;
-            }
-            ,deleteProfile(){
+                let a1=SavedProfiles.filter( (profile) => { if(profile.name!='DUPLICATE__1' && profile.name!='') {return true}else {return false} } )
+                console.log(a1);
                 
+                this.saveProfileList=a1;
+            }
+            ,deleteProfile(event,overrideDeleteName){
+                let name=this.selectedProfile
+                if(overrideDeleteName){
+                    name= overrideDeleteName
+                }
                 let SavedProfiles = localStorage.getItem('SavedProfiles');
                 SavedProfiles=JSON.parse(SavedProfiles);
-                let name=this.selectedProfile
                 let newArr=[]
                 for(let x=0;x<SavedProfiles.length;x++){
-                    if(SavedProfiles[x].name==name){
+                    if(SavedProfiles[x].name==name || SavedProfiles[x].name.startsWith('DUPLICATE__1')){
                         continue
                     }
                     newArr.push(SavedProfiles[x])
@@ -392,12 +420,15 @@ function formatN(ccy,amt){
                 localStorage.setItem('SavedProfiles',JSON.stringify(newArr))
                 this.saveProfileList=newArr;
             }
-            ,loadProfile(){
-                if(this.selectedProfile=="") return;
+            ,loadProfile(event,overrideLoadName){
+                let name=this.selectedProfile
+                if(overrideLoadName){
+                    name= overrideLoadName;
+                }
+                if(name=="") return;
                 let SavedProfiles = localStorage.getItem('SavedProfiles');
                 let newData1={}
                 SavedProfiles=JSON.parse(SavedProfiles);
-                let name=this.selectedProfile
                 for(let x=0;x<SavedProfiles.length;x++){
                     if(SavedProfiles[x].name==name){
                         newData1 = SavedProfiles[x].data
